@@ -75,15 +75,6 @@ def ensure_cols(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-def drop_empty_no(df: pd.DataFrame) -> pd.DataFrame:
-    """No.列が空/欠損/None/nanの行を除外（No.列が無い場合はそのまま返す）"""
-    if df is None or df.empty or "No." not in df.columns:
-        return df
-    out = df.copy()
-    out = out[out["No."].notna()]  # NaN を除外
-    out = out[out["No."].astype(str).str.strip() != ""]  # 空文字を除外
-    out = out[~out["No."].astype(str).str.lower().isin({"none", "nan"})]  # "None","nan" を除外
-    return out
 
 def consolidate_authors_column(df: pd.DataFrame) -> pd.DataFrame:
     """著者列：空白では分割せず、区切り記号のみで分割→同名異表記を代表表記に統合"""
