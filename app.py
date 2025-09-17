@@ -151,32 +151,61 @@ def make_row_id(row):
 # -------------------- データ読み込み --------------------
 st.title("論文検索（年・巻・号＋統一検索フィルタ）")
 
+from pathlib import Path
+
+DEMO_CSV_PATH = Path("data/demo.csv")  # リポに同梱したテストCSV
+SECRET_URL = st.secrets.get("GSHEET_CSV_URL", "")  # （任意）Secretsに入れておけば自動使用
+
+@st.cache_data(ttl=600, show_spinner=False)
+def load_local_csv(path: Path) -> pd.DataFrame:
+    return ensure_cols(pd.read_csv(path, encoding="utf-8"))
+
+@st.cache_data(ttl=600, show_spinner=False)
+def load_url_csv(url: str) -> pd.DataFrame:
+    return ensure_cols(fetch_csv(url))
+
 with st.sidebar:
     st.header("データ読み込み")
-    url = st.text_input("公開CSVのURL（Googleスプレッドシート output=csv）", value="")
+    st.caption("※ まずはデモ用CSVを自動ロード。URL/ファイル指定で上書きできます。")
+
+    # デモ自動ロードのON/OFF（デフォルトON）
+    use_demo = st.toggle("デモCSVを自動ロードする", value=True, help="data/demo.csv を読み込みます。")
+
+    # 上書き手段：URL or ファイル
+    url = st.text_input("公開CSVのURL（Googleスプレッドシート output=csv）", value=SECRET_URL)
     up  = st.file_uploader("CSVをローカルから読み込み", type=["csv"])
-    if st.button("読み込み", type="primary", key="load_btn"):
-        try:
-            if up is not None:
-                st.session_state.df = ensure_cols(pd.read_csv(up))
-            elif url.strip():
-                st.session_state.df = ensure_cols(fetch_csv(url.strip()))
-            else:
-                st.warning("URL または CSV を指定してください。")
-        except Exception as e:
-            st.error(f"読み込みエラー: {e}")
 
-df = st.session_state.get("df", pd.DataFrame())
-if df.empty:
-    st.info("左のサイドバーから CSV を指定して [読み込み] を押してください。")
+    # 明示ボタン：読み込み（URL/ファイルの優先度は「アップロード > URL」）
+    load_clicked = st.button("読み込み（URL/ファイルを優先）", type="primary", key="load_btn")
+
+# 優先順位: 1) クリックでURL/ファイル 2) デモ自動 3) 最後の手段：待機
+df = None
+err = None
+
+try:
+    if load_clicked:
+        if up is not None:
+            df = ensure_cols(pd.read_csv(up, encoding="utf-8"))
+            st.toast("ローカルCSVを読み込みました")
+        elif url.strip():
+            df = load_url_csv(url.strip())
+            st.toast("URLのCSVを読み込みました")
+        else:
+            st.warning("URL または CSV を指定してください。")
+    elif use_demo and DEMO_CSV_PATH.exists():
+        df = load_local_csv(DEMO_CSV_PATH)
+        st.caption(f"✅ デモCSVを自動ロード中: {DEMO_CSV_PATH}")
+    elif SECRET_URL:
+        df = load_url_csv(SECRET_URL)
+        st.caption("✅ SecretsのURLから自動ロード中")
+except Exception as e:
+    err = e
+
+if df is None:
+    if err:
+        st.error(f"読み込みエラー: {err}")
+    st.info("左のサイドバーで CSV を指定するか、デモCSVを有効にしてください。")
     st.stop()
-
-# No. が None/空の行は非表示
-if "No." in df.columns:
-    df = df[df["No."].apply(lambda v: str(v).strip() not in ("", "None", "nan"))]
-
-# 著者異表記統合
-df = consolidate_authors_column(df)
 
 # -------------------- 年・巻・号フィルタ --------------------
 st.subheader("年・巻・号フィルタ")
