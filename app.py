@@ -73,10 +73,6 @@ def ensure_cols(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = [str(c).strip() for c in df.columns]
     return df
 
-df = st.session_state.get("df", pd.DataFrame())
-if df.empty:
-    st.info("左のサイドバーから CSV を指定して [読み込み] を押してください。")
-    st.stop()
 
 
 def drop_empty_no(df: pd.DataFrame) -> pd.DataFrame:
