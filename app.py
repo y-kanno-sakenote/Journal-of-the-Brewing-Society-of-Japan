@@ -326,7 +326,7 @@ with st.form("main_table_form", clear_on_submit=False):
         height=520,
         num_rows="fixed",
     )
-    apply_main = st.form_submit_button("このページの★変更を反映", use_container_width=True)
+    apply_main = st.form_submit_button("チェックした論文をお気に入りリストに追加", use_container_width=True)
 
 if apply_main:
     subset_ids_main = set(disp["_row_id"].tolist())
@@ -379,7 +379,7 @@ if not fav_disp.empty:
             height=420,
             num_rows="fixed",
         )
-        apply_fav = st.form_submit_button("お気に入りの変更（★/tags）を反映", use_container_width=True)
+        apply_fav = st.form_submit_button("お気に入りの変更（★/tags）を更新", use_container_width=True)
 
     if apply_fav:
         # ★の更新
