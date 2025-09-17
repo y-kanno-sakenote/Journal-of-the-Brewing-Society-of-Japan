@@ -73,6 +73,13 @@ def ensure_cols(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = [str(c).strip() for c in df.columns]
     return df
 
+# --- No. 列が空/欠損の行は除外 ---
+if "No." in df.columns:
+    df = df[df["No."].notna()]                 # NaN を除外
+    df = df[df["No."].astype(str).str.strip() != ""]  # 空文字を除外
+    df = df[~df["No."].astype(str).str.lower().isin({"none", "nan"})]  # None, nan を除外
+
+
 def consolidate_authors_column(df: pd.DataFrame) -> pd.DataFrame:
     """著者列：空白では分割せず、区切り記号のみで分割→同名異表記を代表表記に統合"""
     if "著者" not in df.columns:
