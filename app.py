@@ -152,7 +152,7 @@ def make_row_id(row):
     return f"T:{ttl}|Y:{yr}"
 
 # -------------------- データ読み込み --------------------
-st.title("論文検索（年・巻・号＋統一検索フィルタ）")
+st.title("醸造協会誌　論文検索")
 
 from pathlib import Path
 
@@ -226,17 +226,17 @@ with c_y:
     )
 with c_v:
     vol_candidates = sorted({v for v in (df.get("巻数", pd.Series(dtype=str)).map(to_int_or_none)).dropna().unique()})
-    vols_sel = st.multiselect("巻（整数・複数選択）", vol_candidates, default=[])
+    vols_sel = st.multiselect("巻（複数選択）", vol_candidates, default=[])
 with c_i:
     iss_candidates = sorted({v for v in (df.get("号数", pd.Series(dtype=str)).map(to_int_or_none)).dropna().unique()})
-    issues_sel = st.multiselect("号（整数・複数選択）", iss_candidates, default=[])
+    issues_sel = st.multiselect("号（複数選択）", iss_candidates, default=[])
 
 # -------------------- 著者・対象物・研究タイプフィルタ --------------------
-st.subheader("統一検索フィルタ")
+st.subheader("検索フィルタ")
 c_a, c_tg, c_tp = st.columns([1.2, 1.2, 1.2])
 with c_a:
     authors_all = build_author_candidates(df)
-    authors_sel = st.multiselect("著者（正規化＋個別）", authors_all, default=[])
+    authors_sel = st.multiselect("著者", authors_all, default=[])
 with c_tg:
     raw_targets = {t for v in df.get("対象物", pd.Series(dtype=str)).fillna("") for t in split_multi(v)}
     targets_all = order_by_template(list(raw_targets), TARGET_ORDER)
@@ -314,7 +314,7 @@ if "PDFリンク先" in disp.columns:
 display_order = ["★"] + [c for c in disp.columns if c not in ["★", "_row_id"]] + ["_row_id"]
 
 # --- メイン表（フォームで一括反映） ---
-st.subheader("全件（編集可）")
+st.subheader("論文リスト")
 with st.form("main_table_form", clear_on_submit=False):
     edited_main = st.data_editor(
         disp[display_order],
