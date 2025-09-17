@@ -430,13 +430,42 @@ with st.expander("🔎 タグでお気に入りを絞り込み（AND/OR）", exp
     show_cols = [c for c in show_cols if c in fav_disp_for_filter.columns]
     st.dataframe(fav_disp_for_filter[show_cols], use_container_width=True, hide_index=True)
 
-# -------------------- 下部アクション（CSV出力） --------------------
-st.caption(f"現在のお気に入り：{len(st.session_state.favs)} 件 / タグ数：{len({t for s in st.session_state.fav_tags.values() for t in s})} 種")
-export_df = edited_main.drop(columns=["★", "_row_id"])
-st.download_button(
-    "📥 絞り込み結果をCSV出力（表示列のみ）",
-    data=export_df.to_csv(index=False).encode("utf-8-sig"),
-    file_name=f"filtered_{time.strftime('%Y%m%d')}.csv",
-    mime="text/csv",
-    use_container_width=True
+# -------------------- 下部アクション（CSV出力：2種類） --------------------
+st.caption(
+    f"現在のお気に入り：{len(st.session_state.favs)} 件 / "
+    f"タグ数：{len({t for s in st.session_state.fav_tags.values() for t in s})} 種"
 )
+
+# 1) 絞り込み結果の出力（画面の検索結果テーブルと同じ列）
+filtered_export_df = disp.drop(columns=["★", "_row_id"], errors="ignore")
+
+# 2) お気に入りの出力（tags 列を付与）
+fav_export = fav_disp_full[fav_disp_full["_row_id"].isin(st.session_state.favs)].copy()
+
+def _tags_join(rid: str) -> str:
+    s = st.session_state.fav_tags.get(rid, set())
+    return ", ".join(sorted(s)) if s else ""
+
+fav_export["tags"] = fav_export["_row_id"].map(_tags_join)
+fav_export = fav_export.drop(columns=["_row_id"], errors="ignore")
+
+c_dl1, c_dl2 = st.columns(2)
+
+with c_dl1:
+    st.download_button(
+        "📥 絞り込み結果をCSV出力（表示列のみ）",
+        data=filtered_export_df.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"filtered_{time.strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+with c_dl2:
+    st.download_button(
+        "⭐ お気に入りをCSV出力（tags付き）",
+        data=fav_export.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"favorites_{time.strftime('%Y%m%d')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+        disabled=fav_export.empty
+    )
