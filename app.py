@@ -547,8 +547,28 @@ if "PDFリンク先" in disp.columns:
 
 display_order = ["★"] + [c for c in disp.columns if c not in ["★", "_row_id"]] + ["_row_id"]
 
-# --- メイン表（フォームで一括反映） ---
+# --- メイン表（論文リスト） ---
 st.subheader("論文リスト")
+
+# 列名修正（開始ページ → p.始）
+if "開始ページ" in disp.columns:
+    disp = disp.rename(columns={"開始ページ": "p.始"})
+
+# ★ カラム設定（LinkColumn を “HP”“PDF” 表示に）
+column_config = {
+    "★": st.column_config.CheckboxColumn("★", help="気になる論文にチェック/解除", default=False, width="small"),
+}
+if "HPリンク先" in disp.columns:
+    column_config["HPリンク先"] = st.column_config.LinkColumn("HP", help="外部サイトへ移動", display_text="HP")
+if "PDFリンク先" in disp.columns:
+    column_config["PDFリンク先"] = st.column_config.LinkColumn("PDF", help="PDFを開く", display_text="PDF")
+
+# ★ 列順：No. の直後に HP / PDF を固定配置（他は既存順のまま）
+fixed_front = ["★", "No.", "HPリンク先", "PDFリンク先"]
+rest = [c for c in disp.columns if c not in ["★", "_row_id", "No.", "HPリンク先", "PDFリンク先"]]
+display_order = fixed_front + rest + ["_row_id"]
+
+# --- 表を描画 ---
 with st.form("main_table_form", clear_on_submit=False):
     edited_main = st.data_editor(
         disp[display_order],
@@ -561,7 +581,7 @@ with st.form("main_table_form", clear_on_submit=False):
         num_rows="fixed",
     )
     apply_main = st.form_submit_button("チェックした論文をお気に入りリストに追加", use_container_width=True)
-
+    
 if apply_main:
     subset_ids_main = set(disp["_row_id"].tolist())
     checked_subset_main = set(edited_main.loc[edited_main["★"] == True, "_row_id"].tolist())
@@ -595,21 +615,28 @@ def tags_str_for(rid: str) -> str:
     return ", ".join(sorted(s)) if s else ""
 
 if not fav_disp.empty:
-    fav_disp["★"] = fav_disp["_row_id"].apply(lambda rid: rid in st.session_state.favs)
-    fav_disp["tags"] = fav_disp["_row_id"].apply(tags_str_for)  # ← 表示＆編集に使う
+    # 列名修正（開始ページ → p.始）
+    if "開始ページ" in fav_disp.columns:
+        fav_disp = fav_disp.rename(columns={"開始ページ": "p.始"})
 
-    fav_display_order = ["★"] + [c for c in fav_disp.columns if c not in ["★", "_row_id"]] + ["_row_id"]
+    fav_disp["★"] = fav_disp["_row_id"].apply(lambda rid: rid in st.session_state.favs)
+    fav_disp["tags"] = fav_disp["_row_id"].apply(tags_str_for)
 
     fav_column_config = {
         "★": st.column_config.CheckboxColumn("★", help="チェックで解除/追加（下のボタンで反映）", default=True, width="small"),
         "tags": st.column_config.TextColumn("tags（カンマ/空白区切り）", help="例: 清酒, 乳酸菌"),
     }
     if "HPリンク先" in fav_disp.columns:
-        fav_column_config["HPリンク先"] = st.column_config.LinkColumn("HPリンク先", display_text="HP")
+        fav_column_config["HPリンク先"] = st.column_config.LinkColumn("HP", display_text="HP")
     if "PDFリンク先" in fav_disp.columns:
-        fav_column_config["PDFリンク先"] = st.column_config.LinkColumn("PDFリンク先", display_text="PDF")
+        fav_column_config["PDFリンク先"] = st.column_config.LinkColumn("PDF", display_text="PDF")
 
-    # お気に入り表：★と tags のみ編集可
+    # 列順調整
+    fixed_front = ["★", "No.", "HPリンク先", "PDFリンク先"]
+    rest = [c for c in fav_disp.columns if c not in ["★", "_row_id", "No.", "HPリンク先", "PDFリンク先", "tags"]]
+    fav_display_order = fixed_front + rest + ["tags", "_row_id"]
+
+    # 表描画
     with st.form("fav_table_form", clear_on_submit=False):
         fav_edited = st.data_editor(
             fav_disp[fav_display_order],
@@ -617,7 +644,7 @@ if not fav_disp.empty:
             use_container_width=True,
             hide_index=True,
             column_config=fav_column_config,
-            disabled=[c for c in fav_display_order if c not in ["★", "tags"]],  # ← tags を編集可に
+            disabled=[c for c in fav_display_order if c not in ["★", "tags"]],
             height=420,
             num_rows="fixed",
         )
